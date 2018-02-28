@@ -57,30 +57,29 @@ proc getFileHeader(data: string): FileHeader =
 proc processRecord(data: string, header: FileHeader, f: string): string =
   var idx = 1
   var tl = 0
-  result = "INSERT INTO " & f & " "
-  var fs = "("
-  var vs = "("
+  var fs = ""
+  var vs = "" 
   for fd in header.field_headers :
     tl = tl + fd.length
     fs = fs & fd.name & ","
     var v = data[idx..idx + fd.length-1]
     case fd.field_type:
-      of 'C': vs = vs & "'" & v.strip() & "'," 
-      of 'N': vs = vs & v.strip() & ","
-      of 'D': vs = vs & "'" & v[0..3] & "-" & v[4..5] & "-" & v[6..7] & "',"
+      of 'C': vs = vs & "'" & data[idx..idx + fd.length-1].strip() & "'," 
+      of 'N': vs = vs & data[idx..idx + fd.length-1].strip() & ","
+      of 'D': vs = vs & "'" & data[idx..idx+3] & "-" & data[idx+4..idx+5] & "-" & data[idx+6..idx+7] & "',"
       else: discard
     idx = idx + fd.length
-  fs = fs[0..fs.len-2] & ")"
-  vs = vs[0..vs.len-2] & ")"
-  result = result & fs & " VALUES " & vs & ";"
+  fs = "(" & fs[0..fs.len-2] & ")"
+  vs = "(" & vs[0..vs.len-2] & ")"
+  result = "INSERT INTO " & f & " " & fs & " VALUES " & vs & ";"
   #echo result
 
-proc processFile(data: string, header: FileHeader, filename: string): string =
-  result = ""
+proc processFile(data: string, header: FileHeader, filename: string): seq[string] =
+  result = @[]
   var s = header.length+1
   var e = header.length+header.record_length
   while s < data.len and e < data.len:
-    result = result & processRecord(data[s..e], header, filename)
+    result.add(processRecord(data[s..e], header, filename))
     s = s + header.record_length
     e = s + header.record_length
 
@@ -92,9 +91,9 @@ proc createColumnFragment(h: FieldHeader): string =
     else: discard
 
 proc createTable(h: FileHeader, name: string): string =
-  result  = "CREATE TABLE IF NOT EXISTS " & name & " ( "
+  result  = "CREATE TABLE IF NOT EXISTS " & name & " ("
   for field in h.field_headers:
-    result = result & createColumnFragment(field) & ", "    
+    result = result & createColumnFragment(field) & ","    
   result = result[0..result.len-3] & ");"   
   
 proc main() {.async.} =
@@ -108,12 +107,19 @@ proc main() {.async.} =
       case key
       of "file", "f": filename = $val
     of cmdEnd: assert(false)
-  var file = openAsync("camov.dbf", fmRead)
+  var file = openAsync(filename, fmRead)
   file.setFilePos(0)
   let data = await file.readAll()
+  file.close()
   let header = getFileHeader(data)
-  echo processFile(data, header, filename)
-  echo createTable(header, filename)
+  let inserts =  processFile(data, header, filename)
+  let creation =  createTable(header, filename)
+  file = openAsync(filename & ".sql", fmWrite)
+  file.setFilePos(0)
+  await file.write(creation)
+  await file.write("\r\n") 
+  for line in inserts:
+    await file.write(line & "\n")
   file.close()
 
 waitFor main()
