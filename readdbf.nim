@@ -91,7 +91,7 @@ proc createColumnFragment(h: FieldHeader): string =
     else: discard
 
 proc createTable(h: FileHeader, name: string): string =
-  result  = "CREATE TABLE IF NOT EXISTS " & name & " ("
+  result  = "CREATE TABLE " & name & " ("
   for field in h.field_headers:
     result = result & createColumnFragment(field) & ","    
   result = result[0..result.len-3] & ");"   
@@ -108,12 +108,13 @@ proc main() {.async.} =
       of "file", "f": filename = $val
     of cmdEnd: assert(false)
   var file = openAsync(filename, fmRead)
+  let nam = filename.split(".")
   file.setFilePos(0)
   let data = await file.readAll()
   file.close()
   let header = getFileHeader(data)
-  let inserts =  processFile(data, header, filename)
-  let creation =  createTable(header, filename)
+  let inserts =  processFile(data, header, nam[0])
+  let creation =  createTable(header, nam[0])
   file = openAsync(filename & ".sql", fmWrite)
   file.setFilePos(0)
   await file.write(creation)
