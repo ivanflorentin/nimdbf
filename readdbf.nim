@@ -6,24 +6,24 @@ import
   parseopt
 
 type
-  FieldHeader = ref object
-    name: string
-    field_type: char
-    data_address: int32
-    length: int16
+  FieldHeader* = ref object
+    name*: string
+    field_type*: char
+    data_address*: int32
+    length*: int16
 
-  FileHeader = ref object
-    version : int8
-    update_year: int8
-    update_month: int8
-    update_day: int8
-    record_count: int32
-    header_length: int16
-    record_length: int16
-    field_headers: seq[FieldHeader]
-    length: int32
+  FileHeader* = ref object
+    version*: int8
+    update_year*: int8
+    update_month*: int8
+    update_day*: int8
+    record_count*: int32
+    header_length*: int16
+    record_length*: int16
+    field_headers*: seq[FieldHeader]
+    length*: int32
   
-proc getFieldHeader(data: string): FieldHeader =
+proc getFieldHeader*(data: string): FieldHeader =
   new(result)
   result.name = ""
   for c in data[0..10]:
@@ -32,7 +32,7 @@ proc getFieldHeader(data: string): FieldHeader =
   result.field_type = data[11]
   result.length = (data[16].int16) + (data[17].int16 * 256) 
 
-proc getFileHeader(data: string): FileHeader =
+proc getFileHeader*(data: string): FileHeader =
   new (result)
   result.version = data[0].int8
   result.update_year = data[1].int8
@@ -54,7 +54,7 @@ proc getFileHeader(data: string): FileHeader =
       result.field_headers.add(getFieldHeader(data[idx..idx+31])) 
     idx = idx + 32
 
-proc processRecord(data: string, header: FileHeader, f: string): string =
+proc processRecord*(data: string, header: FileHeader, f: string): string =
   var idx = 1
   var tl = 0
   var fs = ""
@@ -77,7 +77,7 @@ proc processRecord(data: string, header: FileHeader, f: string): string =
   result = "INSERT INTO " & f & " " & fs & " VALUES " & vs & ";"
   #echo result
 
-proc processFile(data: string, header: FileHeader, filename: string): seq[string] =
+proc processFile*(data: string, header: FileHeader, filename: string): seq[string] =
   result = @[]
   var s = header.length+1
   var e = header.length+header.record_length
@@ -86,14 +86,14 @@ proc processFile(data: string, header: FileHeader, filename: string): seq[string
     s = s + header.record_length
     e = s + header.record_length
 
-proc createColumnFragment(h: FieldHeader): string =
+proc createColumnFragment*(h: FieldHeader): string =
   case h.field_type:
     of 'N': result = h.name & " NUMERIC(10,2) "
     of 'C': result = h.name & " varchar(" & $h.length & ") "
     of 'D': result = h.name & " date "
     else: discard
 
-proc createTable(h: FileHeader, name: string): string =
+proc createTable*(h: FileHeader, name: string): string =
   result  = "CREATE TABLE " & name & " ("
   for field in h.field_headers:
     result = result & createColumnFragment(field) & ","    
