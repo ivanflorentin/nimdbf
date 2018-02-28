@@ -62,12 +62,15 @@ proc processRecord(data: string, header: FileHeader, f: string): string =
   for fd in header.field_headers :
     tl = tl + fd.length
     fs = fs & fd.name & ","
-    var v = data[idx..idx + fd.length-1]
-    case fd.field_type:
-      of 'C': vs = vs & "'" & data[idx..idx + fd.length-1].strip() & "'," 
-      of 'N': vs = vs & data[idx..idx + fd.length-1].strip() & ","
-      of 'D': vs = vs & "'" & data[idx..idx+3] & "-" & data[idx+4..idx+5] & "-" & data[idx+6..idx+7] & "',"
-      else: discard
+    var v = data[idx..idx + fd.length-1].strip()
+    if v == "" :
+      vs = vs & " NULL,"
+    else:
+      case fd.field_type:
+        of 'C': vs = vs & "'" & v & "'," 
+        of 'N': vs = vs & v & ","
+        of 'D': vs = vs & "'" & v[0..3] & "-" & v[4..5] & "-" & v[6..7] & "',"
+        else: discard
     idx = idx + fd.length
   fs = "(" & fs[0..fs.len-2] & ")"
   vs = "(" & vs[0..vs.len-2] & ")"
