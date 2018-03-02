@@ -75,16 +75,20 @@ proc processRecord*(data: string, header: FileHeader, f: string): string =
   fs = "(" & fs[0..fs.len-2] & ")"
   vs = "(" & vs[0..vs.len-2] & ")"
   result = "INSERT INTO " & f & " " & fs & " VALUES " & vs & ";"
-  #echo result
 
 proc processFile*(data: string, header: FileHeader, filename: string): seq[string] =
   result = @[]
+  var deleted = 0
   var s = header.length+1
   var e = header.length+header.record_length
   while s < data.len and e < data.len:
-    result.add(processRecord(data[s..e], header, filename))
+    if $data[s] == "*":
+      deleted = deleted + 1
+    else: 
+      result.add(processRecord(data[s..e], header, filename))
     s = s + header.record_length
     e = s + header.record_length
+  echo "Deleted records: " & $deleted
 
 proc createColumnFragment*(h: FieldHeader): string =
   case h.field_type:
