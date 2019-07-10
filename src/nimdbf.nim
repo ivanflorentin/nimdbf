@@ -1,6 +1,6 @@
-import nimdbf / [ dbfmodel, dbfdecoder, dbf2sql ]
+import nimdbf / [ dbfmodel, dbfdecoder, dbf2sql, dbf2json ]
 
-export dbfmodel, dbfdecoder, dbf2sql
+export dbfmodel, dbfdecoder, dbf2sql, dbf2json
 
 
 #[  
