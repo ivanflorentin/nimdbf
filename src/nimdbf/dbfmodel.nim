@@ -1,4 +1,5 @@
 ## DBF data model and helper procs 
+
 type
   DBFFieldHeader* = ref object
     ## Field header
@@ -19,7 +20,8 @@ type
     field_headers*: seq[DBFFieldHeader]
     length*: int32
   
-proc getFieldHeader(data: string): DBFFieldHeader =
+proc getDBFFieldHeader(data: string): DBFFieldHeader =
+  new (result)
   result.name = ""
   for c in data[0..10]:
     if c !=  char(0):
@@ -29,6 +31,7 @@ proc getFieldHeader(data: string): DBFFieldHeader =
 
 proc getDBFHeader*(data: string): DBFHeader =
   ## Extracts the File Header from a string representing a DBF file
+  new (result)
   result.version = data[0].int8
   result.update_year = data[1].int8
   result.update_month = data[2].int8
@@ -46,6 +49,19 @@ proc getDBFHeader*(data: string): DBFHeader =
       result.length = idx.int32
       finish = true
     else:
-      result.field_headers.add(getFieldHeader(data[idx .. idx+31])) 
+      result.field_headers.add(getDBFFieldHeader(data[ idx .. idx + 31 ])) 
     idx = idx + 32
 
+
+proc `$`*(h: DBFFieldHeader): string =
+  "name: " & h.name &  ", type: " & h.field_type &
+    ", address: " & $h.data_address & ", length: " &  $h.length
+
+proc `$`*(h: DBFHeader): string =
+  result = "version: " & $h.version & ", updated: " & $h.update_year & "-" &
+    $h.update_month & "-" &
+    $h.update_day & ", records: " & $h.record_count & ", header size: " &
+    $h.header_length & ", record size: " & $h.record_length &
+    ", file size: " & $h.length & ", columns: \n"
+  for fh in h.field_headers:
+    result = result & "\t" & $fh & "\n"
