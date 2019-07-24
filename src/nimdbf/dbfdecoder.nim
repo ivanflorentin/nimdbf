@@ -6,11 +6,11 @@ import
 
 import nimdbf / dbfmodel
 
-proc processRecord*(data: string, header: DBFHeader, f: string): string =
+proc processRecord*(data: string, header: DBFHeader, table: string): string =
   var idx = 1
   var tl = 0
   var fs = ""
-  var vs = "" 
+  var vs = ""  
   for fd in header.field_headers :
     tl = tl + fd.length
     fs = fs & fd.name & ","
@@ -26,7 +26,7 @@ proc processRecord*(data: string, header: DBFHeader, f: string): string =
     idx = idx + fd.length
   fs = "(" & fs[0..fs.len-2] & ")"
   vs = "(" & vs[0..vs.len-2] & ")"
-  result = "INSERT INTO " & f & " " & fs & " VALUES " & vs & ";"
+  result = "INSERT INTO " & table & " " & fs & " VALUES " & vs & ";"
 
 proc processFile*(data: string, header: DBFHeader, filename: string): seq[string] =
   result = @[]
