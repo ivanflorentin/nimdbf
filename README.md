@@ -6,11 +6,11 @@
 
 Utility to convert DBF files to various formats
 
-#Usage:
+# Usage:
 
 $ nimdbf --file:<filename> [additional options]
 
-#Options:
+# Options:
 --file, -f: File to parse
 --json, -j: Output in json format
 --header, -h: Output only header 
