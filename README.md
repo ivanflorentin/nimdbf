@@ -8,14 +8,23 @@ Utility to convert DBF files to various formats
 
 # Usage:
 
-$ nimdbf --file:<filename> [additional options]
+$ nimdbf --file: filename [additional options]
 
 # Options:
+
 --file, -f: File to parse
+
 --json, -j: Output in json format
+
 --header, -h: Output only header 
---records, -r <n>: Process n records
---start, -s <n>: Start at record n (counting from 0)
+
+--records, -r:n: Process n records
+
+--start, -s:n: Start at record n (counting from 0)
+
+# Example
+
+$nim c -r src/nimdbf.nim --file:myFile.dbf --json --records:4 --start:10  
 
 At this point it has been tested only with version 3 of the DBF spec, for files created with FOX and FOX Plus for Unix
 
