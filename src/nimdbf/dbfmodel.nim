@@ -1,5 +1,94 @@
 ## DBF data model and helper procs 
 
+#[
+Binary DBF file structure:
+copied from http://web.tiscali.it/SilvioPitti/
+
+ 0 | Version number      *1|  ^
+   |-----------------------|  |      
+ 1 | Date of last update   |  |
+ 2 |      YYMMDD           |  |
+ 3 |                       |  |
+   |-----------------------|  |
+ 4 | Number of records     | Record
+ 5 | in data file          | header
+ 6 | ( 32 bits ) *14       |  |
+ 7 |                       |  |
+   |-----------------------|  |
+ 8 | Length of header      |  |
+ 9 | structure ( 16 bits ) |  |
+   |-----------------------|  |
+ 10| Length of each record |  |
+ 11| ( 16 bits )         *2|  |
+   |-----------------------|  |
+ 12| ( Reserved )        *3|  |
+ 13|                       |  |
+   |-----------------------|  |
+ 14| Incomplete transac.*12|  |
+   |-----------------------|  |
+ 15| Encryption flag    *13|  |
+   |-----------------------|  |
+ 16| Free record thread    |  |
+ 17| (reserved for LAN     |  |
+ 18|  only )               |  |
+ 19|                       |  |
+   |-----------------------|  |
+ 20| ( Reserved for        |  |            _  |=======================| ______
+   |   multi-user dBASE )  |  |           /  0| Field name in ASCII   |  ^ 
+   : ( dBASE III+ - )      :  |          /    : (terminated by 00h)   :  |
+   :                       :  |         |     |                       |  |
+ 27|                       |  |         |   10|                       |  |
+   |-----------------------|  |         |     |-----------------------| For
+ 28| MDX flag (dBASE IV) *4|  |         |   11| Field type in ASCII   | each
+   |-----------------------|  |         |     |-----------------------| field
+ 29| Language driver     *5|  |        /    12| Field data address    |  |
+   |-----------------------|  |       /       |                     *6|  |
+ 30| ( Reserved )          |  |      /        | (in memory !!!)       |  |
+ 31|                     *3|  |     /       15| (dBASE III+)          |  |
+   |=======================|__|____/          |-----------------------|  | <-
+ 32|                       |  |  ^          16| Field length  (binary)|  |   |
+   |- - - - - - - - - - - -|  |  |            |-----------------------|  |   | *7
+   |                       |  |  |          17| Decimal count (binary)|  |   |
+   |- - - - - - - - - - - -|  |  Field        |-----------------------|  | <-
+   |                       |  | Descriptor  18| ( Reserved for        |  |
+   :. . . . . . . . . . . .:  |  |array     19|   multi-user dBASE)*18|  |
+   :                       :  |  |            |-----------------------|  |
+n  |                       |__|__v_         20| Work area ID      *16 |  |
+   |-----------------------|  |    \          |-----------------------|  |
+n+1| Terminator (0Dh)      |  |     \       21| ( Reserved for        |  |
+   |=======================|  |      \      22|   multi-user dBASE )  |  |
+m  | Database Container    |  |       \       |-----------------------|  |
+   :                *15    :  |        \    23| Flag for SET FIELDS   |  |
+   :                       :  |         |     |-----------------------|  |
+m+263                      |  |         |   24| ( Reserved )          |  |
+   |=======================|__v_ ___    |     :                       :  |
+   :                       :    ^       |     :                       :  |
+   :                       :    |       |   30|                       |  |
+   | Record structure      |    |       |     |-----------------------|  |
+   |                       |    |        \  31| Index field flag    *8|  |
+   |                       |    |         \_  |=======================| _v_____
+   |                       | Records
+   |-----------------------|    |                                      
+   |                       |    |          _  |=======================| _______
+   |                       |    |         /  0| Field deleted flag  *9|  ^ 
+   |                       |    |        /    |-----------------------|  |
+   |                       |    |       /     | Data               *10|  One
+   |                       |    |      /      :                    *17: record
+   |                       |____|_____/       |                       |  |
+   :                       :    |             |                       | _v_____
+   :                       :____|_____        |=======================|
+   :                       :    |     \       | Field deleted flag  *9|
+   |                       |    |      \      |-----------------------|
+   |                       |    |       \     |                       |
+   |                       |    |        \    |                       |
+   |                       |    |         \_  |-----------------------|
+   |                       |    |
+   |=======================|    |
+   |__End_of_File__________| ___v____  End of file ( 1Ah )  *11
+
+
+]#
+
 type
   DBFFieldHeader* = ref object
     ## Field header
@@ -29,9 +118,15 @@ proc getDBFFieldHeader(data: string): DBFFieldHeader =
   result.field_type = data[11]
   result.length = data[16].int16 + data[17].int16 * 256 
 
+
+
+proc getHeaderLength*(data: string): int16 =
+  result = data[8].int16 + data[9].int16 * 256
+  
 proc getDBFHeader*(data: string): DBFHeader =
   ## Extracts the File Header from a string representing a DBF file
   new (result)
+  result.header_length = data.getHeaderLength()
   result.version = data[0].int8
   result.update_year = data[1].int8
   result.update_month = data[2].int8

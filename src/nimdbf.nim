@@ -1,12 +1,30 @@
+import parseopt, strutils, asyncdispatch, asyncfile, json
 import nimdbf / [ dbfmodel, dbfdecoder, dbf2sql, dbf2json ]
 
-export dbfmodel, dbfdecoder, dbf2sql, dbf2json
+##[
+Utility to convert DBF files to various formats
+usage:
+
+$ nimdbf --file:<filename> [additional options]
+
+Options:
+--file, -f: File to parse
+--json, -j: Output in json format
+--header, -h: Output only header 
+--records, -r <n>: Process n records
+--start, -s <n>: Start at record n (counting from 0)
+
+]##
 
 
-#[  
 proc main() {.async.} =
   var filename = ""
   var opts = initOptParser()
+  var record_count = 5
+  var buffer_size = 4096
+  var inJson = false
+  var onlyHeader = false
+  var start = 0
   for kind, key, val in opts.getopt():
     case kind
     of cmdArgument:
@@ -14,22 +32,36 @@ proc main() {.async.} =
     of cmdLongOption, cmdShortOption:
       case key
       of "file", "f": filename = $val
+      of "json", "j": inJson = true
+      of "header", "h": onlyHeader = true
+      of "records", "r": record_count = parseInt($val)
+      of "start", "s": start = parseInt($val)
     of cmdEnd: assert(false)
   var file = openAsync(filename, fmRead)
   let nam = filename.split(".")
   file.setFilePos(0)
-  let data = await file.readAll()
-  file.close()
-  let header = getFileHeader(data)
-  let inserts =  processFile(data, header, nam[0])
-  let creation =  createTable(header, nam[0])
-  file = openAsync(filename & ".sql", fmWrite)
-  file.setFilePos(0)
-  await file.write(creation)
-  await file.write("\r\n") 
-  for line in inserts:
-    await file.write(line & "\n")
+  var data = await file.read(buffer_size)
+  var header_size = data.getHeaderLength()
+  if header_size > buffer_size:
+    file.setFilePos(0)
+    data = await file.read(buffer_size)
+  let header = getDBFHeader(data)
+  if onlyHeader:
+    if inJson:
+      echo header.toJson().pretty
+      return  
+  var pos = 1 + header_size +  (start * header.record_length)
+  file.setFilePos(pos)
+  buffer_size = header.record_length * record_count 
+  data = await file.read(buffer_size)
+  var r_start = 0
+  var r_end = header.record_length
+  if inJson:  
+    for j in 0 .. record_count - 1 :
+      echo data[r_start ..  r_start + header.record_length- 1].record2Json(header).pretty
+      r_start += header.record_length
+    return
+  
   file.close()
 
 waitFor main()
-]#
