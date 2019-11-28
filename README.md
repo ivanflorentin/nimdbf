@@ -16,6 +16,8 @@ $ nimdbf --file: filename [additional options]
 
 --json, -j: Output in json format
 
+--sql, l: Output in SQL format. header data are converted to CREATE TABLE with a tablename corresponding to the name of the file being processed. Records are converted to INSERTs
+
 --header, -h: Output only header 
 
 --records, -r:n: Process n records

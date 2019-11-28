@@ -23,6 +23,7 @@ proc main() {.async.} =
   var record_count = 5
   var buffer_size = 4096
   var inJson = false
+  var sql = false
   var onlyHeader = false
   var start = 0
   for kind, key, val in opts.getopt():
@@ -33,12 +34,13 @@ proc main() {.async.} =
       case key
       of "file", "f": filename = $val
       of "json", "j": inJson = true
+      of "sql", "l": sql = true  
       of "header", "h": onlyHeader = true
       of "records", "r": record_count = parseInt($val)
       of "start", "s": start = parseInt($val)
     of cmdEnd: assert(false)
   var file = openAsync(filename, fmRead)
-  let nam = filename.split(".")
+  let tablename = filename.split(".")[0]
   file.setFilePos(0)
   var data = await file.read(buffer_size)
   var header_size = data.getHeaderLength()
@@ -49,7 +51,10 @@ proc main() {.async.} =
   if onlyHeader:
     if inJson:
       echo header.toJson().pretty
-      return  
+      return
+    if sql:
+      echo header.toSQLCreate(tablename)
+      return
   var pos = header_size +  (start * header.record_length)
   file.setFilePos(pos)
   buffer_size = header.record_length * record_count 
@@ -58,10 +63,15 @@ proc main() {.async.} =
   var r_end = header.record_length
   if inJson:  
     for j in 0 .. record_count - 1 :
-      echo data[r_start ..  r_start + header.record_length- 1].record2Json(header).pretty
+      echo data[r_start ..  r_start + header.record_length- 1].
+          record2Json(header).pretty
       r_start += header.record_length
     return
-  
+  if sql:
+    for j in 0 .. record_count - 1 :
+      echo data[r_start ..  r_start + header.record_length- 1].
+          toSQLInsert(header, tablename)
+      r_start += header.record_length
   file.close()
 
 waitFor main()

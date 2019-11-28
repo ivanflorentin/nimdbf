@@ -1,7 +1,7 @@
 import ./dbfmodel
 import strformat, strutils
 
-proc sqlCreateStatement*(header: DBFHeader, tablename: string): string =
+proc toSQLCreate*(header: DBFHeader, tablename: string): string =
   result = fmt"CREATE TABLE {tablename} ("
   for field in header.field_headers:
     case field.field_type:
@@ -11,9 +11,9 @@ proc sqlCreateStatement*(header: DBFHeader, tablename: string): string =
       else: discard
     result.add ","
   result = result[0 .. result.len - 3] & ");"
-  echo result
+  
 
-proc sqlInsertStatement*(header: DBFHeader, table: string, data: string) : string =
+proc toSQLInsert*(data: string, header: DBFHeader, table: string) : string =
   var idx = 1
   var tl = 0
   var fs = ""
