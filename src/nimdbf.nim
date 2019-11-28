@@ -50,7 +50,7 @@ proc main() {.async.} =
     if inJson:
       echo header.toJson().pretty
       return  
-  var pos = 1 + header_size +  (start * header.record_length)
+  var pos = header_size +  (start * header.record_length)
   file.setFilePos(pos)
   buffer_size = header.record_length * record_count 
   data = await file.read(buffer_size)
